@@ -85,6 +85,40 @@ function avcCodecString(width: number, height: number, fps: number): string {
   return `avc1.6400${level.toString(16).padStart(2, '0')}`
 }
 
+type Accel = 'prefer-hardware' | 'no-preference' | 'prefer-software'
+
+/** Configure + encode + flush one probe frame; true only if it truly worked.
+ *  VideoEncoder.isConfigSupported() over-reports — a GPU H.264 encoder can claim
+ *  support yet fail to initialize or flush (flaky hardware encoders on Windows). */
+function probeEncode(cfg: VideoEncoderConfig): Promise<boolean> {
+  return new Promise((resolve) => {
+    let ok = true
+    const enc = new VideoEncoder({ output: () => { /* discard */ }, error: () => { ok = false } })
+    try { enc.configure(cfg) } catch { resolve(false); return }
+    const c = document.createElement('canvas')
+    c.width = cfg.width
+    c.height = cfg.height
+    c.getContext('2d')?.fillRect(0, 0, 8, 8)
+    try {
+      const fr = new VideoFrame(c, { timestamp: 0, duration: Math.round(1e6 / (cfg.framerate || 30)) })
+      enc.encode(fr, { keyFrame: true })
+      fr.close()
+    } catch { try { enc.close() } catch { /* already */ } ; resolve(false); return }
+    enc.flush().then(() => resolve(ok), () => resolve(false)).finally(() => { try { enc.close() } catch { /* already */ } })
+  })
+}
+
+/** Pick an encoder acceleration that actually encodes on this machine, trying
+ *  hardware first and falling back to software (verified, not just "supported"). */
+async function pickEncoderConfig(base: VideoEncoderConfig): Promise<VideoEncoderConfig> {
+  for (const mode of ['prefer-hardware', 'no-preference', 'prefer-software'] as Accel[]) {
+    const cfg: VideoEncoderConfig = { ...base, hardwareAcceleration: mode }
+    const supported = await VideoEncoder.isConfigSupported(cfg).then((s) => !!s.supported).catch(() => false)
+    if (supported && (await probeEncode(cfg))) return cfg
+  }
+  return { ...base, hardwareAcceleration: 'prefer-software' } // last resort
+}
+
 export interface ExportOptions {
   /** AE-style shutter blur: average sub-frame composites per output frame */
   motionBlur?: boolean
@@ -181,11 +215,11 @@ export function startExport(
       framerate: fps,
       latencyMode: 'quality'
     }
-    // prefer the GPU encoder (VAAPI) and fall back to software when missing
-    let config: VideoEncoderConfig = { ...baseConfig, hardwareAcceleration: 'prefer-hardware' }
-    const hw = await VideoEncoder.isConfigSupported(config).catch(() => null)
-    if (!hw?.supported) config = { ...baseConfig, hardwareAcceleration: 'no-preference' }
-    console.info(`[kadr] export encoder: ${hw?.supported ? 'hardware' : 'software'}`)
+    // Pick a *verified* encoder: GPU H.264 can report supported yet fail to
+    // initialize/flush (flaky on Windows), so each mode is proven by encoding a
+    // probe frame before we commit. Falls through to software.
+    const config = await pickEncoderConfig(baseConfig)
+    console.info(`[kadr] export encoder: ${config.hardwareAcceleration}`)
     encoder.configure(config)
 
     try {
