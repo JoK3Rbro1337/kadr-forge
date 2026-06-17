@@ -50,7 +50,7 @@ export async function probeMedia(path: string): Promise<ProbeResult> {
   }
 
   const kind = isImage ? 'image' : video ? 'video' : 'audio'
-  const name = path.split('/').pop() || path
+  const name = path.split(/[\\/]/).pop() || path
 
   const asset: ProbeResult['asset'] = {
     path,

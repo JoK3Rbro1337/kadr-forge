@@ -4,7 +4,14 @@ import type { KadrApi, ExportProgress } from '@shared/types'
 const api: KadrApi = {
   openMediaDialog: () => ipcRenderer.invoke('media:open-dialog'),
   probeMedia: (path) => ipcRenderer.invoke('media:probe', path),
-  fileUrl: (path) => `kadr://media${encodeURI(path).replace(/[?#]/g, encodeURIComponent)}`,
+  fileUrl: (path) => {
+    // Normalise to a URL path: backslashes → '/', and ensure a leading slash so
+    // Windows drive paths (D:\dir\f) form a valid kadr://media/D:/dir/f URL
+    // instead of the malformed kadr://mediaD:%5C… that broke media streaming.
+    const p = path.replace(/\\/g, '/')
+    const abs = p.startsWith('/') ? p : `/${p}`
+    return `kadr://media${encodeURI(abs).replace(/[?#]/g, encodeURIComponent)}`
+  },
 
   saveProjectDialog: (name) => ipcRenderer.invoke('project:save-dialog', name),
   openProjectDialog: () => ipcRenderer.invoke('project:open-dialog'),
