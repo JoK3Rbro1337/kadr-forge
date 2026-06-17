@@ -1,6 +1,6 @@
 {
   "name": "kadr",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Kadr — GPU-accelerated multi-track video editor with AI integration",
   "main": "out/main/main.js",
   "author": "Black Triangle",
@@ -66,6 +66,10 @@
       {
         "from": "resources/ffmpeg",
         "to": "ffmpeg"
+      },
+      {
+        "from": "resources/python",
+        "to": "python"
       }
     ],
     "win": {

@@ -32,12 +32,16 @@ def main():
     ap.add_argument("--model", default="large-v3")
     ap.add_argument("--language", default="auto")
     ap.add_argument("--duration", type=float, default=0.0)
+    # Where to download/cache models (first run pulls from Hugging Face);
+    # None falls back to the default HF cache.
+    ap.add_argument("--models-dir", default=None)
     args = ap.parse_args()
 
     from faster_whisper import WhisperModel
 
     threads = max(4, (os.cpu_count() or 8) - 2)
-    model = WhisperModel(args.model, device="cpu", compute_type="int8", cpu_threads=threads)
+    model = WhisperModel(args.model, device="cpu", compute_type="int8", cpu_threads=threads,
+                         download_root=args.models_dir or None)
 
     segments, info = model.transcribe(
         args.audio,

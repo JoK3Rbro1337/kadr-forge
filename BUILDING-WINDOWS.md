@@ -33,6 +33,20 @@ Source changes (committed):
   their DLLs into `resources/ffmpeg/` before packaging — they are bundled into
   the app and are **gitignored** (not stored in the repo). A shared build
   (e.g. from gyan.dev) is fine; copy the whole `bin/` content.
+- **Bundled Python** (for transcription) in `resources/python/`, also bundled
+  and gitignored. Assemble it once:
+  ```powershell
+  # a relocatable, self-contained CPython (not a venv — venvs aren't portable)
+  $u = 'https://github.com/astral-sh/python-build-standalone/releases/latest'
+  # download a cpython-3.12.x+...-x86_64-pc-windows-msvc-install_only.tar.gz asset,
+  # then extract so that resources/python/python.exe exists:
+  & "$env:SystemRoot\System32\tar.exe" -xzf cpython-...-install_only.tar.gz -C resources
+  # install faster-whisper into it (uv or the bundled pip both work):
+  uv pip install --python resources\python\python.exe faster-whisper
+  ```
+  Whisper models are **not** bundled — faster-whisper downloads the chosen model
+  (base/medium/large-v3) on first use into `userData/whisper-models`. The app
+  prefers this bundled interpreter; `KADR_PYTHON` still overrides it.
 
 ## Build
 

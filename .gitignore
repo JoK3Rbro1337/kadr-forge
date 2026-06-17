@@ -7,5 +7,7 @@ dist/
 
 # Windows build: packaged artifacts (publish to GitHub Releases, not git)
 release/
-# Bundled ffmpeg binaries — supplied per build machine, see BUILDING-WINDOWS.md
+# Bundled runtimes (ffmpeg + Python/faster-whisper) — assembled per build
+# machine, not source; see BUILDING-WINDOWS.md
 resources/ffmpeg/
+resources/python/
