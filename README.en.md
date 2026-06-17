@@ -6,10 +6,9 @@
 
 ## ⬇️ Download for Windows
 
-**[→ Latest release](https://github.com/sergqwer/kadr/releases/latest)** (always the newest build) · direct links for v0.1.3:
+### [→ Download the latest release](https://github.com/sergqwer/kadr/releases/latest)
 
-- 📦 **[Portable (zip)](https://github.com/sergqwer/kadr/releases/download/v0.1.3/Kadr-0.1.3-win.zip)** — unzip anywhere and run `Kadr.exe`
-- 🛠️ **[Installer (exe)](https://github.com/sergqwer/kadr/releases/download/v0.1.3/Kadr.Setup.0.1.3.exe)**
+Two files on the release page: 📦 **`Kadr-…-win.zip`** — portable (unzip and run `Kadr.exe`) · 🛠️ **`Kadr-Setup-….exe`** — installer.
 
 This is a **Windows port** of Kadr: ffmpeg and Python + faster-whisper are
 bundled, so editing, export and speech-to-text work out of the box — nothing to
