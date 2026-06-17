@@ -69,9 +69,11 @@ export function TransportBar() {
 export function LangSwitch() {
   const lang = useSettings((s) => s.lang)
   const setLang = useSettings((s) => s.setLang)
+  const order = ['en', 'uk', 'ru'] as const
+  const next = order[(order.indexOf(lang) + 1) % order.length]
   return (
-    <button className="lang" onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')}>
-      {lang === 'ru' ? 'RU' : 'EN'}
+    <button className="lang" onClick={() => setLang(next)} title={`${lang.toUpperCase()} → ${next.toUpperCase()}`}>
+      {lang.toUpperCase()}
     </button>
   )
 }
