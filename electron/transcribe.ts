@@ -5,10 +5,20 @@
 import { app, ipcMain, BrowserWindow } from 'electron'
 import { spawn, ChildProcess } from 'child_process'
 import { promises as fs } from 'fs'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { tmpdir } from 'os'
 import { ExportMuxer } from './ffmpeg'
 import type { TranscribeRequest, TranscribeResult, TranscribeSegment } from '@shared/types'
+
+// Windows ships python as `python`, not `python3`; allow an explicit override.
+const PYTHON = process.env.KADR_PYTHON || (process.platform === 'win32' ? 'python' : 'python3')
+
+// In a packaged build the script lives inside app.asar, which external programs
+// like python cannot read — point at the unpacked copy (asarUnpack in build).
+function scriptPath(name: string): string {
+  const p = join(app.getAppPath(), 'scripts', name)
+  return p.replace(`app.asar${sep}`, `app.asar.unpacked${sep}`)
+}
 
 let current: { muxer: ExportMuxer | null; py: ChildProcess | null; cancelled: boolean } | null = null
 
@@ -48,8 +58,8 @@ async function run(win: BrowserWindow, req: TranscribeRequest): Promise<Transcri
     let language = req.language
     let liveText = ''
     await new Promise<void>((resolve, reject) => {
-      const py = spawn('python3', [
-        join(app.getAppPath(), 'scripts', 'transcribe.py'),
+      const py = spawn(PYTHON, [
+        scriptPath('transcribe.py'),
         '--audio', wav,
         '--model', req.model,
         '--language', req.language,

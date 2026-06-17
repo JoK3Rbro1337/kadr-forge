@@ -4,7 +4,7 @@
 // iteration); `remotion render` runs exactly once per fragment content hash
 // at export time.
 import { app, ipcMain, BrowserWindow } from 'electron'
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, ChildProcess, SpawnOptions } from 'child_process'
 import { promises as fs, existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
@@ -13,6 +13,27 @@ import type { FragmentSpec, FragmentInfo } from '@shared/types'
 
 export const WORKSPACE = process.env.KADR_FRAGMENTS_DIR || join(homedir(), 'kadr-fragments')
 const FRAG_DIR = () => join(WORKSPACE, 'src', 'fragments')
+
+const IS_WIN = process.platform === 'win32'
+
+// npm/npx are .cmd shims on Windows that CreateProcess can't launch directly
+// (and Node ≥18 refuses to spawn .cmd without a shell); route them through the
+// command interpreter, which resolves them on PATH.
+function spawnTool(tool: string, args: string[], opts: SpawnOptions): ChildProcess {
+  if (IS_WIN) return spawn(process.env.ComSpec || 'cmd.exe', ['/c', tool, ...args], opts)
+  return spawn(tool, args, opts)
+}
+
+// Kill a child and its descendants. The POSIX path relies on the sh watchdog
+// below; on Windows we tear the whole tree down with taskkill.
+function killTree(child: ChildProcess | null) {
+  if (!child) return
+  if (IS_WIN && child.pid) {
+    try { spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }) } catch { /* gone */ }
+  } else {
+    try { child.kill() } catch { /* already dead */ }
+  }
+}
 
 // npm install and remotion's headless-chrome download may need the user's
 // network settings (proxies etc.) — shared with the Claude session config:
@@ -259,13 +280,13 @@ async function ensureWorkspace(
     onProgress?.('install', 0)
     const extraEnv = await netEnv()
     await new Promise<void>((resolve, reject) => {
-      const child = spawn('npm', ['install', '--no-audit', '--no-fund'], {
+      const child = spawnTool('npm', ['install', '--no-audit', '--no-fund'], {
         cwd: WORKSPACE,
         env: { ...process.env, ...extraEnv },
         stdio: ['ignore', 'pipe', 'pipe']
       })
       let err = ''
-      child.stderr.on('data', (c) => { err += c })
+      child.stderr!.on('data', (c) => { err += c })
       child.on('error', reject)
       child.on('close', (code) => {
         if (code === 0) resolve()
@@ -308,15 +329,23 @@ async function ensureServer(): Promise<{ url: string }> {
   // inherit Electron's listening sockets and would block the next launch.
   // The bin runs directly (NOT via npx — npx makes vite a grandchild the
   // watchdog's kill couldn't reach).
-  const child = spawn('sh', ['-c',
-    `"./node_modules/.bin/vite" --port ${VITE_PORT} --strictPort & V=$!; ` +
-    `(while kill -0 ${process.pid} 2>/dev/null; do sleep 3; done; kill $V 2>/dev/null) & ` +
-    'wait $V'
-  ], {
-    cwd: WORKSPACE,
-    env: { ...process.env },
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
+  // Windows has no sh/kill: run vite via npx and tear the tree down with
+  // taskkill at quit (killTree). On POSIX the watchdog handles orphans.
+  const child = IS_WIN
+    ? spawnTool('npx', ['vite', '--port', String(VITE_PORT), '--strictPort'], {
+        cwd: WORKSPACE,
+        env: { ...process.env },
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+    : spawn('sh', ['-c',
+        `"./node_modules/.bin/vite" --port ${VITE_PORT} --strictPort & V=$!; ` +
+        `(while kill -0 ${process.pid} 2>/dev/null; do sleep 3; done; kill $V 2>/dev/null) & ` +
+        'wait $V'
+      ], {
+        cwd: WORKSPACE,
+        env: { ...process.env },
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
   const url = await new Promise<string>((resolve, reject) => {
     let out = ''
     const timer = setTimeout(() => reject(new Error('vite start timeout: ' + out.slice(-400))), 30000)
@@ -338,7 +367,7 @@ async function ensureServer(): Promise<{ url: string }> {
 }
 
 function stopServer() {
-  server?.child?.kill()
+  killTree(server?.child ?? null)
   server = null
 }
 
@@ -419,7 +448,7 @@ async function renderFragment(
 
   const extraEnv = await netEnv()
   const job = renderChain.then(() => new Promise<void>((resolve, reject) => {
-    const child = spawn('npx', args, {
+    const child = spawnTool('npx', args, {
       cwd: WORKSPACE,
       env: { ...process.env, ...extraEnv },
       stdio: ['ignore', 'pipe', 'pipe']

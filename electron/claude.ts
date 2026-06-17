@@ -78,10 +78,16 @@ function startBridge(win: BrowserWindow): Promise<{ server: Server; port: number
   })
 }
 
+const IS_WIN = process.platform === 'win32'
+
 function which(cmd: string): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile('/bin/sh', ['-c', `command -v ${cmd}`], (err, stdout) => {
-      resolve(err ? null : stdout.trim() || null)
+    // `where` on Windows, POSIX `command -v` elsewhere; take the first hit.
+    const finder = IS_WIN ? 'where' : '/bin/sh'
+    const args = IS_WIN ? [cmd] : ['-c', `command -v ${cmd}`]
+    execFile(finder, args, (err, stdout) => {
+      const first = stdout.split(/\r?\n/).map((l) => l.trim()).find(Boolean)
+      resolve(err ? null : first || null)
     })
   })
 }
@@ -143,7 +149,12 @@ async function openSession(
   try {
     // lazy import: node-pty is native — a load failure must not break the app
     const pty = await import('node-pty')
-    const p = pty.spawn(bin, args, {
+    // Windows: a `claude` resolved to a .cmd/.bat shim can't be launched by
+    // CreateProcess directly, so route it through the command interpreter.
+    const useShim = IS_WIN && /\.(cmd|bat)$/i.test(bin)
+    const file = useShim ? (process.env.ComSpec || 'cmd.exe') : bin
+    const spawnArgs = useShim ? ['/c', bin, ...args] : args
+    const p = pty.spawn(file, spawnArgs, {
       name: 'xterm-256color',
       cols: Math.max(20, cols),
       rows: Math.max(5, rows),

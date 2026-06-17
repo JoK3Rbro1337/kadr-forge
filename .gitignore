@@ -4,3 +4,8 @@ dist/
 *.log
 .claude/
 *.autosave.kadr
+
+# Windows build: packaged artifacts (publish to GitHub Releases, not git)
+release/
+# Bundled ffmpeg binaries — supplied per build machine, see BUILDING-WINDOWS.md
+resources/ffmpeg/
