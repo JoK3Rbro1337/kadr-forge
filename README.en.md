@@ -1,6 +1,6 @@
 # Kadr
 
-**AI-native, GPU-accelerated video editor — with Claude Code built into the timeline.**
+**AI-native, GPU-accelerated video editor — with Codex and Claude Code built into the timeline.**
 
 [Русская версия →](README.md) · [Full feature guide (RU) →](FEATURES.md)
 
@@ -40,8 +40,8 @@ captions to this part», watch it happen live in the preview.
   iterating!), automatic pixel-capture mode when you put GL effects, 3D or
   transitions on a fragment, and exactly **one** real render at export
   (content-hash cached).
-- 🤖 **Embedded Claude Code** — a real interactive Claude session in a
-  terminal panel, wired to the live project over MCP: it reads the
+- 🤖 **Embedded Codex or Claude Code** — a real interactive agent session
+  in a terminal panel, wired to the live project over MCP: it reads the
   timeline, edits clips, transcribes, creates and iterates Remotion
   fragments while you watch the preview update.
 - 📤 **Fast, careful export** — WebCodecs hardware encoding, mp4box-based
@@ -59,7 +59,7 @@ captions to this part», watch it happen live in the preview.
 | Node.js ≥ 20 | everything | |
 | ffmpeg + ffprobe | import, audio mix, export | any recent build in PATH |
 | python3 + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | speech-to-text, auto-captions | `pip install faster-whisper`; models download on first use |
-| [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) | the 🤖 panel | optional; uses your existing login |
+| [Codex CLI](https://developers.openai.com/codex/cli/) or [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) | the 🤖 panel | optional; uses your existing login |
 | network (one-time) | Remotion fragments workspace | `~/kadr-fragments`, ~150 MB |
 
 ## Getting started
@@ -70,17 +70,22 @@ npm install        # postinstall rebuilds node-pty for Electron
 npm run dev
 ```
 
-Import media, edit, press Export. For the AI assistant press 🤖 (the
-`claude` CLI must be installed and logged in). If your network needs a
-proxy for Claude/npm, create `~/.config/kadr/claude-env.json`:
+Import media, edit, press Export. Choose Codex or Claude in the top bar and
+press 🤖 (the selected CLI must be installed and logged in). Codex is the
+default and Kadr remembers your selection. If your network needs a proxy,
+create `~/.config/kadr/codex-env.json` or `claude-env.json`:
 
 ```json
 { "env": { "HTTPS_PROXY": "http://127.0.0.1:1080", "NO_PROXY": "127.0.0.1,localhost" } }
 ```
 
+Both files also accept `command` and `args` overrides. Supplying `args`
+fully replaces Kadr's generated integration arguments and is intended for
+advanced wrapper setups.
+
 ## How the AI integration works
 
-Kadr starts a local HTTP bridge into the renderer and hands Claude an MCP
+Kadr starts a local HTTP bridge into the renderer and hands the selected agent an MCP
 server with five tools:
 
 | Tool | What it does |
@@ -91,7 +96,7 @@ server with five tools:
 | `kadr_transcribe` | local Whisper over a file or a timeline range |
 | `kadr_fragment_create` | scaffold a Remotion composition as a timeline clip |
 
-The killer loop: Claude creates a fragment, edits its TSX with normal file
+The killer loop: the agent creates a fragment, edits its TSX with normal file
 tools, and vite hot-reloads it into your preview in ~2 seconds — you give
 feedback in plain language, no rendering until the final export.
 
@@ -112,7 +117,7 @@ autosave semantics and auto-captions.
 ## Documentation
 
 - [FEATURES.md](FEATURES.md) — the full feature guide (Russian, 1200+ lines).
-- [CLAUDE.md](CLAUDE.md) — architecture map (also read by Claude Code).
+- [CLAUDE.md](CLAUDE.md) — architecture map for coding agents and contributors.
 
 ## License
 

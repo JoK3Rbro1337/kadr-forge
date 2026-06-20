@@ -238,7 +238,7 @@ export interface FragmentSpec {
 export interface FragmentInfo {
   id: string
   dir: string
-  entry: string // the TSX file Claude edits
+  entry: string // the TSX file an embedded agent edits
   meta: FragmentSpec
 }
 
@@ -353,6 +353,8 @@ export interface ExportProgress {
   message?: string
 }
 
+export type AgentProvider = 'codex' | 'claude'
+
 // ---------------------------------------------------------------------------
 // IPC surface exposed by the preload script
 
@@ -411,7 +413,16 @@ export interface KadrApi {
   /** mtime in ms, or null when missing — used to pick up external edits */
   statFile(path: string): Promise<number | null>
 
-  /** Embedded Claude Code terminal session (PTY in main + MCP bridge). */
+  /** Embedded Codex/Claude terminal session (PTY in main + MCP bridge). */
+  agentOpen(provider: AgentProvider, cols: number, rows: number, cwd: string | null):
+    Promise<{ ok: boolean; port?: number; error?: string }>
+  agentInput(provider: AgentProvider, data: string): void
+  agentResize(provider: AgentProvider, cols: number, rows: number): void
+  agentClose(provider?: AgentProvider): Promise<void>
+  onAgentData(cb: (data: string) => void): () => void
+  onAgentExit(cb: (code: number) => void): () => void
+
+  /** @deprecated Compatibility aliases for the former Claude-only API. */
   claudeOpen(cols: number, rows: number, cwd: string | null):
     Promise<{ ok: boolean; port?: number; error?: string }>
   claudeInput(data: string): void

@@ -1,14 +1,16 @@
-// Test: embedded Claude Code integration — PTY terminal session (with a
-// safe `bash` override instead of the real claude), the editor HTTP bridge,
+// Test: embedded Codex/Claude integration — provider switching, PTY terminal
+// sessions (with safe local overrides), the editor HTTP bridge,
 // and the MCP stdio server end-to-end (initialize → tools/list → kadr_state
 // → kadr_eval mutation with undo entry).
 import WebSocket from 'ws'
 import { spawn } from 'child_process'
-import { writeFileSync, unlinkSync, readFileSync } from 'fs'
+import { writeFileSync, unlinkSync, readFileSync, chmodSync } from 'fs'
 import http from 'http'
 
 const PORT = process.env.KADR_CDP_PORT || 9777
 const ENV_FILE = `${process.env.HOME}/.config/kadr/claude-env.json`
+const CODEX_ENV_FILE = `${process.env.HOME}/.config/kadr/codex-env.json`
+const FAKE_CODEX = '/tmp/kadr-fake-codex'
 
 async function getPageWs() {
   for (let i = 0; i < 30; i++) {
@@ -69,10 +71,19 @@ function check(name, cond, extra = '') {
 ws = new WebSocket(await getPageWs())
 await new Promise((r, j) => { ws.on('open', r); ws.on('error', j) })
 
-// safe override: the "claude" session is a plain interactive bash
+// Safe overrides: Claude is bash; fake Codex prints Kadr's generated argv
+// before becoming an interactive bash.
 let envBackup = null
 try { envBackup = readFileSync(ENV_FILE, 'utf8') } catch { /* none */ }
+let codexEnvBackup = null
+try { codexEnvBackup = readFileSync(CODEX_ENV_FILE, 'utf8') } catch { /* none */ }
 writeFileSync(ENV_FILE, JSON.stringify({ command: 'bash', args: [] }))
+writeFileSync(FAKE_CODEX, `#!/bin/sh
+printf 'KADR_CODEX_ARGS:%s\\n' "$*"
+exec /bin/bash
+`)
+chmodSync(FAKE_CODEX, 0o755)
+writeFileSync(CODEX_ENV_FILE, JSON.stringify({ command: FAKE_CODEX }))
 
 try {
   // give the page a name marker to read back through the bridges
@@ -82,7 +93,33 @@ try {
     return true
   })()`)
 
-  // 1) PTY session: open, type a command, see its output
+  // 1) Codex is wired with one-off MCP overrides and remains interactive.
+  const codexOpened = await evalJs(`(async () => {
+    window.__agent = ''
+    window.__agentOff = window.kadr.onAgentData((d) => { window.__agent += d })
+    return window.kadr.agentOpen('codex', 100, 30, null)
+  })()`)
+  check('Codex terminal session opens', codexOpened.ok === true && codexOpened.port > 0,
+    JSON.stringify(codexOpened))
+
+  const codexArgs = await evalJs(`(async () => {
+    for (let i = 0; i < 30 && !window.__agent.includes('KADR_CODEX_ARGS:'); i++)
+      await new Promise(r => setTimeout(r, 100))
+    return window.__agent
+  })()`)
+  check('Codex receives ephemeral Kadr MCP config without forcing sandbox policy',
+    codexArgs.includes('mcp_servers.kadr.command=') &&
+    codexArgs.includes('mcp_servers.kadr.args=') && !codexArgs.includes('--add-dir'),
+    codexArgs.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').trim())
+
+  const codexEchoed = await evalJs(`(async () => {
+    window.kadr.agentInput('codex', 'echo KADR_CODEX_42\\n')
+    await new Promise(r => setTimeout(r, 700))
+    return window.__agent.includes('KADR_CODEX_42')
+  })()`)
+  check('Codex PTY input/output round-trip works', codexEchoed === true)
+
+  // 2) Switching to Claude replaces the Codex PTY and bridge immediately.
   const opened = await evalJs(`(async () => {
     window.__cl = ''
     window.__clOff = window.kadr.onClaudeData((d) => { window.__cl += d })
@@ -92,14 +129,27 @@ try {
   check('terminal session opens (bash override)', opened.ok === true && opened.port > 0,
     JSON.stringify(opened))
 
+  const codexPortDead = await new Promise((resolve) => {
+    const req = http.request(
+      { host: '127.0.0.1', port: codexOpened.port, path: '/eval', method: 'POST', timeout: 1500 },
+      () => resolve(false)
+    )
+    req.on('error', () => resolve(true))
+    req.on('timeout', () => { req.destroy(); resolve(true) })
+    req.end('{}')
+  })
+  check('switching providers closes the previous bridge', codexPortDead === true)
+
   const echoed = await evalJs(`(async () => {
+    // Simulate a delayed cleanup from the unmounted Codex panel.
+    await window.kadr.agentClose('codex')
     window.kadr.claudeInput('echo KADR_$((40+2))\\n')
     await new Promise(r => setTimeout(r, 1200))
     return window.__cl.includes('KADR_42')
   })()`)
-  check('pty round-trip works (typed command echoes back)', echoed === true)
+  check('stale Codex cleanup cannot close the active Claude PTY', echoed === true)
 
-  // 2) editor HTTP bridge: eval from outside the page
+  // 3) editor HTTP bridge: eval from outside the page
   const bridged = await new Promise((resolve) => {
     const body = JSON.stringify({
       code: 'return window.kadrEditor.useEditor.getState().project.name'
@@ -119,7 +169,7 @@ try {
   check('editor HTTP bridge evaluates in the page', bridged.ok === 'mcp-test-project',
     JSON.stringify(bridged))
 
-  // 3) MCP stdio server: handshake + tools + live state + mutation
+  // 4) MCP stdio server: handshake + tools + live state + mutation
   const mcp = spawn('node', ['electron/mcp-bridge.cjs', String(opened.port)],
     { cwd: process.cwd(), stdio: ['pipe', 'pipe', 'inherit'] })
   const pending = new Map()
@@ -190,10 +240,11 @@ try {
 
   mcp.kill()
 
-  // 4) session teardown
+  // 5) session teardown
   const closed = await evalJs(`(async () => {
     await window.kadr.claudeClose()
     window.__clOff()
+    window.__agentOff()
     await new Promise(r => setTimeout(r, 300))
     return true
   })()`)
@@ -210,6 +261,9 @@ try {
 } finally {
   if (envBackup !== null) writeFileSync(ENV_FILE, envBackup)
   else try { unlinkSync(ENV_FILE) } catch { /* absent */ }
+  if (codexEnvBackup !== null) writeFileSync(CODEX_ENV_FILE, codexEnvBackup)
+  else try { unlinkSync(CODEX_ENV_FILE) } catch { /* absent */ }
+  try { unlinkSync(FAKE_CODEX) } catch { /* absent */ }
 }
 
 ws.close()

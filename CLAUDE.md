@@ -16,8 +16,8 @@ mixes audio and muxes/transcodes per preset.
 
 ## Requirements
 - Node.js ≥ 20, system `ffmpeg`/`ffprobe` in PATH
-- Optional: `python3` + `faster-whisper` (speech-to-text), the `claude`
-  CLI (embedded AI assistant), network access for the one-time Remotion
+- Optional: `python3` + `faster-whisper` (speech-to-text), the `codex` or
+  `claude` CLI (embedded AI assistant), network access for the one-time Remotion
   workspace install
 
 ## Architecture
@@ -33,12 +33,12 @@ mixes audio and muxes/transcodes per preset.
   bins), `makeProxy` (540p preview proxies), `ExportMuxer` (per-segment
   `volume,atempo*,afade,adelay,apad,atrim` → `amix` with exact level
   compensation).
-- `electron/claude.ts` — embedded Claude Code: node-pty PTY running the
-  user's `claude` CLI, per-session HTTP bridge (POST /eval →
-  `webContents.executeJavaScript`); extra env/command via
-  `userData/claude-env.json`.
-- `electron/mcp-bridge.cjs` — MCP stdio server (SDK) that claude receives
-  via a generated `--mcp-config`; tools: kadr_state / kadr_eval /
+- `electron/agent.ts` — embedded Codex/Claude controller: provider-neutral
+  node-pty session, generation-safe switching, and per-session HTTP bridge
+  (POST /eval → `webContents.executeJavaScript`); extra env/command via
+  `userData/<provider>-env.json`.
+- `electron/mcp-bridge.cjs` — MCP stdio server (SDK) injected into either
+  provider; tools: kadr_state / kadr_eval /
   kadr_export / kadr_transcribe / kadr_fragment_create.
 - `electron/transcribe.ts` + `scripts/transcribe.py` — faster-whisper
   runner (VAD, anti-hallucination thresholds and post-filters, NDJSON
@@ -73,7 +73,7 @@ mixes audio and muxes/transcodes per preset.
   capture when the clip carries GL-only features (effects/3D/masks/
   transitions).
 - `src/engine/autosave.ts` — 5-minute autosave with `activity` flags
-  (paused during export and Claude sessions).
+  (paused during export and agent sessions).
 - `window.kadrEditor` (set in `src/main.tsx`) — scripting surface for
   automation / AI / MCP integration.
 
@@ -81,7 +81,7 @@ mixes audio and muxes/transcodes per preset.
 `scripts/e2e*.mjs` drive the app over CDP. Async evals park results in
 globals and poll (`awaitPromise` is flaky under GC). Tests autosave any
 non-empty live project before reloading the page, and back up/restore
-`claude-env.json` when they override the Claude command.
+provider env files when they override embedded agent commands.
 
 ## Conventions
 - All timeline math in seconds; keyframe times are clip-local.
