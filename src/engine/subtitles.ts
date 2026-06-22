@@ -246,6 +246,18 @@ async function freePath(base: string, ext: string, takenOk: string[]): Promise<s
   return `${base}.${Date.now()}.${ext}`
 }
 
+// Path helpers that handle both POSIX and Windows separators: the renderer has
+// no Node `path`, and asset paths arrive in the OS-native form (D:\dir\f on
+// Windows), so a forward-slash-only split would mangle them.
+function dirOf(p: string): string {
+  const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))
+  return i >= 0 ? p.slice(0, i) : ''
+}
+function baseOf(p: string): string {
+  const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))
+  return i >= 0 ? p.slice(i + 1) : p
+}
+
 /**
  * Transcribe an asset or a timeline range: mixdown → whisper → SRT + TXT
  * next to the (dominant) source media, registered as project text docs.
@@ -275,7 +287,7 @@ export async function transcribeFlow(opts: TranscribeFlowOpts): Promise<Transcri
     duration = asset.duration
     cueOffset = 0 // cue times = source-media times
     assetId = asset.id
-    baseDir = asset.path.replace(/\/[^/]*$/, '')
+    baseDir = dirOf(asset.path)
     baseName = sanitize(asset.name.replace(/\.[^.]+$/, ''))
   } else {
     const { start, end } = opts.target
@@ -288,7 +300,7 @@ export async function transcribeFlow(opts: TranscribeFlowOpts): Promise<Transcri
     docOffset = absolute ? 0 : start
     // dominant source: the segment covering the most of the range
     const byDur = [...audioSegments].sort((a, b) => b.duration - a.duration)[0]
-    baseDir = byDur.path.replace(/\/[^/]*$/, '')
+    baseDir = dirOf(byDur.path)
     const mm = (t: number) => `${Math.floor(t / 60)}m${pad(Math.round(t % 60), 2)}s`
     baseName = `${sanitize(project.name)}_${mm(start)}-${mm(end)}`
   }
@@ -306,7 +318,7 @@ export async function transcribeFlow(opts: TranscribeFlowOpts): Promise<Transcri
 
   const mkDoc = (path: string, format: 'srt' | 'txt'): TextDoc => ({
     id: uid(),
-    name: path.split('/').pop()!,
+    name: baseOf(path),
     path,
     format,
     assetId,

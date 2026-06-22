@@ -127,7 +127,9 @@ function mediaResponse(filePath: string, rangeHeader: string | null): Response {
 app.whenReady().then(() => {
   protocol.handle('kadr', (request) => {
     const url = new URL(request.url)
-    const filePath = decodeURIComponent(url.pathname)
+    let filePath = decodeURIComponent(url.pathname)
+    // Windows drive paths arrive as "/D:/dir/file" — drop the leading slash.
+    if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(filePath)) filePath = filePath.slice(1)
     try {
       return mediaResponse(filePath, request.headers.get('range'))
     } catch {

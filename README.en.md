@@ -4,6 +4,18 @@
 
 [Русская версия →](README.md) · [Full feature guide (RU) →](FEATURES.md)
 
+## ⬇️ Download for Windows
+
+### [→ Download the latest release](https://github.com/sergqwer/kadr/releases/latest)
+
+Two files on the release page: 📦 **`Kadr-…-win.zip`** — portable (unzip and run `Kadr.exe`) · 🛠️ **`Kadr-Setup-….exe`** — installer.
+
+This is a **Windows port** of Kadr: ffmpeg and Python + faster-whisper are
+bundled, so editing, export and speech-to-text work out of the box — nothing to
+install (subtitle models download on first use). UI in English (default) /
+Українська / Русский. Unsigned build — on first launch SmartScreen may warn:
+"More info" → "Run anyway".
+
 ![Kadr demo](demo.gif)
 
 Kadr is a multi-track video editor (Electron + React + TypeScript) built

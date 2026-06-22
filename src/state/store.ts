@@ -160,15 +160,15 @@ export function snapPoints(p: Project, exclude: string | string[], playhead: num
 }
 
 interface SettingsState {
-  lang: 'ru' | 'en'
+  lang: 'ru' | 'en' | 'uk'
   /** uniform lane height for all tracks, px */
   trackH: number
-  setLang(l: 'ru' | 'en'): void
+  setLang(l: 'ru' | 'en' | 'uk'): void
   setTrackH(h: number): void
 }
 
 export const useSettings = create<SettingsState>((set) => ({
-  lang: (localStorage.getItem('kadr.lang') as 'ru' | 'en') || 'ru',
+  lang: (localStorage.getItem('kadr.lang') as 'ru' | 'en' | 'uk') || 'en',
   trackH: Math.min(140, Math.max(32, Number(localStorage.getItem('kadr.trackh')) || 56)),
   setLang: (lang) => {
     localStorage.setItem('kadr.lang', lang)

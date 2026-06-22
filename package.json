@@ -1,6 +1,10 @@
 {
   "name": "kadr",
+<<<<<<< HEAD
   "version": "0.2.0",
+=======
+  "version": "0.1.5",
+>>>>>>> sergqwer/main
   "description": "Kadr — GPU-accelerated multi-track video editor with AI integration",
   "main": "out/main/main.js",
   "author": {
@@ -11,7 +15,11 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+<<<<<<< HEAD
     "dist": "electron-vite build && electron-builder",
+=======
+    "dist": "electron-vite build && electron-builder --win",
+>>>>>>> sergqwer/main
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "postinstall": "electron-rebuild -f -w node-pty",
@@ -38,7 +46,11 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.1",
     "electron": "^31.7.7",
+<<<<<<< HEAD
     "electron-builder": "^26.15.3",
+=======
+    "electron-builder": "^24.13.3",
+>>>>>>> sergqwer/main
     "electron-vite": "^2.3.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.8",
@@ -48,10 +60,19 @@
     "Claude (Anthropic)"
   ],
   "build": {
+<<<<<<< HEAD
     "appId": "com.helpfreedom.kadr",
     "productName": "Kadr",
     "npmRebuild": false,
     "directories": { "output": "release" },
+=======
+    "appId": "com.blacktriangle.kadr",
+    "productName": "Kadr",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+>>>>>>> sergqwer/main
     "files": [
       "out/**/*",
       "electron/mcp-bridge.cjs",
@@ -65,6 +86,7 @@
       "**/node_modules/@modelcontextprotocol/**",
       "**/node_modules/zod/**"
     ],
+<<<<<<< HEAD
     "linux": {
       "target": ["AppImage", "pacman"],
       "category": "AudioVideo",
@@ -76,6 +98,22 @@
       "extraResources": [
         { "from": "resources/ffmpeg", "to": "ffmpeg" },
         { "from": "resources/python", "to": "python" }
+=======
+    "extraResources": [
+      {
+        "from": "resources/ffmpeg",
+        "to": "ffmpeg"
+      },
+      {
+        "from": "resources/python",
+        "to": "python"
+      }
+    ],
+    "win": {
+      "target": [
+        "zip",
+        "nsis"
+>>>>>>> sergqwer/main
       ]
     },
     "nsis": {

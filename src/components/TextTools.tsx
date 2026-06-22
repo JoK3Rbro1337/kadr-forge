@@ -103,6 +103,7 @@ export function TranscribeDialog() {
           <span>{t('trLanguage')}</span>
           <select value={language} disabled={running} onChange={(e) => setLanguage(e.target.value)}>
             <option value="auto">{t('trAuto')}</option>
+            <option value="uk">Українська</option>
             <option value="ru">Русский</option>
             <option value="en">English</option>
           </select>

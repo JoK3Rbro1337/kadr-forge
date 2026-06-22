@@ -29,7 +29,7 @@ export function MediaBin() {
         if (ext === 'srt' || ext === 'txt') {
           textDocs.push({
             id: uid(),
-            name: path.split('/').pop()!,
+            name: path.split(/[\\/]/).pop()!, // basename for either separator
             path,
             format: ext as 'srt' | 'txt'
           })

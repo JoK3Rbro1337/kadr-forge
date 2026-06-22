@@ -4,3 +4,10 @@ dist/
 *.log
 .claude/
 *.autosave.kadr
+
+# Windows build: packaged artifacts (publish to GitHub Releases, not git)
+release/
+# Bundled runtimes (ffmpeg + Python/faster-whisper) — assembled per build
+# machine, not source; see BUILDING-WINDOWS.md
+resources/ffmpeg/
+resources/python/

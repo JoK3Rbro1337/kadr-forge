@@ -1,12 +1,31 @@
 // ffmpeg/ffprobe helpers running in the main process.
 import { execFile, spawn, ChildProcess } from 'child_process'
 import { promisify } from 'util'
+import { app } from 'electron'
+import { join } from 'path'
+import { existsSync } from 'fs'
 import type { ProbeResult, ExportJob, ExportProgress, WaveformData } from '@shared/types'
 
 const execFileP = promisify(execFile)
 
-export const FFMPEG = process.env.KADR_FFMPEG || 'ffmpeg'
-export const FFPROBE = process.env.KADR_FFPROBE || 'ffprobe'
+// Resolution order: explicit env override → binary bundled with the packaged
+// app (resources/ffmpeg, see electron-builder `extraResources`) → bare name on
+// PATH. Bundling makes the Windows .exe self-contained — no system ffmpeg needed.
+function resolveBin(envVar: string, name: string): string {
+  const override = process.env[envVar]
+  if (override) return override
+  const exe = process.platform === 'win32' ? `${name}.exe` : name
+  try {
+    if (app.isPackaged) {
+      const bundled = join(process.resourcesPath, 'ffmpeg', exe)
+      if (existsSync(bundled)) return bundled
+    }
+  } catch { /* app not ready — fall through to PATH */ }
+  return name
+}
+
+export const FFMPEG = resolveBin('KADR_FFMPEG', 'ffmpeg')
+export const FFPROBE = resolveBin('KADR_FFPROBE', 'ffprobe')
 
 const IMAGE_EXT = /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i
 
@@ -31,7 +50,7 @@ export async function probeMedia(path: string): Promise<ProbeResult> {
   }
 
   const kind = isImage ? 'image' : video ? 'video' : 'audio'
-  const name = path.split('/').pop() || path
+  const name = path.split(/[\\/]/).pop() || path
 
   const asset: ProbeResult['asset'] = {
     path,

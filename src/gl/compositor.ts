@@ -252,13 +252,17 @@ export class Compositor {
   width = 0
   height = 0
 
-  constructor(canvas: HTMLCanvasElement | OffscreenCanvas) {
+  constructor(canvas: HTMLCanvasElement | OffscreenCanvas, opts?: { desynchronized?: boolean }) {
     this.canvas = canvas
     const gl = canvas.getContext('webgl2', {
       alpha: false,
       antialias: false,
       preserveDrawingBuffer: true,
-      desynchronized: true
+      // Low-latency hint for the on-screen preview only. A desynchronized
+      // canvas has no stable backbuffer, so `new VideoFrame(canvas)` fails on
+      // it (export) — Windows/ANGLE throws OperationError. Default off; the
+      // live preview opts in.
+      desynchronized: opts?.desynchronized ?? false
     }) as WebGL2RenderingContext | null
     if (!gl) throw new Error('WebGL2 is not available')
     this.gl = gl

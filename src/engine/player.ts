@@ -457,7 +457,8 @@ export class Player {
   constructor(private hooks: PlayerHooks) {}
 
   attach(canvas: HTMLCanvasElement) {
-    this.comp = new Compositor(canvas)
+    // on-screen preview: opt into the low-latency desynchronized canvas
+    this.comp = new Compositor(canvas, { desynchronized: true })
     const loop = (ts: number) => {
       this.tick(ts)
       this.raf = requestAnimationFrame(loop)
