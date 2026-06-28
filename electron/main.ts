@@ -4,7 +4,7 @@ import { promises as fs, createReadStream, statSync } from 'fs'
 import { tmpdir } from 'os'
 import { createHash } from 'crypto'
 import { probeMedia, makeProxy, ExportMuxer } from './ffmpeg'
-import { registerClaudeIpc } from './claude'
+import { registerAgentIpc } from './agent'
 import { registerTranscribeIpc } from './transcribe'
 import { registerFragmentIpc } from './fragments'
 import type { ExportJob, Project } from '@shared/types'
@@ -137,7 +137,7 @@ app.whenReady().then(() => {
     }
   })
   registerIpc()
-  registerClaudeIpc(() => win)
+  registerAgentIpc(() => win)
   registerTranscribeIpc(() => win)
   registerFragmentIpc(() => win)
   createWindow()

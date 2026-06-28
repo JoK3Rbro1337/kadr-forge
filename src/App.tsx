@@ -5,11 +5,12 @@ import { Inspector } from './components/Inspector'
 import { Timeline } from './components/Timeline'
 import { TransportBar, LangSwitch } from './components/TransportBar'
 import { ExportDialog } from './components/ExportDialog'
-import { ClaudePanel } from './components/ClaudePanel'
+import { AgentPanel } from './components/AgentPanel'
 import { TranscribeDialog, SubtitlePanel } from './components/TextTools'
 import { CaptionsDialog } from './components/CaptionsDialog'
 import { useEditor, newProject } from './state/store'
 import { useT, type TKey } from './i18n'
+import type { AgentProvider } from '@shared/types'
 
 async function saveProject() {
   const s = useEditor.getState()
@@ -48,7 +49,10 @@ export default function App() {
   const [tlHeight, setTlHeight] = useState(() =>
     Math.min(Number(localStorage.getItem('kadr.tlh')) || 330, window.innerHeight - 220)
   )
-  const [claudeOpen, setClaudeOpen] = useState(false)
+  const [agentOpen, setAgentOpen] = useState(false)
+  const [agentProvider, setAgentProvider] = useState<AgentProvider>(() =>
+    localStorage.getItem('kadr.agentProvider') === 'claude' ? 'claude' : 'codex'
+  )
   const [sideW, setSideW] = useState(() =>
     Math.min(640, Math.max(200, Number(localStorage.getItem('kadr.sidew')) || 280))
   )
@@ -163,13 +167,30 @@ export default function App() {
         <button className="primary" onClick={() => useEditor.getState().setExportOpen(true)}>
           {t('export')}
         </button>
-        <button
-          className={claudeOpen ? 'claude-btn active' : 'claude-btn'}
-          title={t('claudeTitle')}
-          onClick={() => setClaudeOpen((v) => !v)}
-        >
-          🤖 Claude
-        </button>
+        <div className="agent-control">
+          <select
+            className="agent-provider"
+            aria-label={t('agentProvider')}
+            title={t('agentProvider')}
+            value={agentProvider}
+            onChange={(event) => {
+              const provider = event.target.value as AgentProvider
+              localStorage.setItem('kadr.agentProvider', provider)
+              setAgentProvider(provider)
+            }}
+          >
+            <option value="codex">Codex</option>
+            <option value="claude">Claude</option>
+          </select>
+          <button
+            className={agentOpen ? 'agent-btn active' : 'agent-btn'}
+            title={t('agentTitle')}
+            aria-label={t('agentTitle')}
+            onClick={() => setAgentOpen((value) => !value)}
+          >
+            🤖
+          </button>
+        </div>
         <LangSwitch />
       </div>
       <div className="main-row">
@@ -187,7 +208,13 @@ export default function App() {
       <TranscribeDialog />
       <SubtitlePanel />
       <CaptionsDialog />
-      {claudeOpen && <ClaudePanel onClose={() => setClaudeOpen(false)} />}
+      {agentOpen && (
+        <AgentPanel
+          key={agentProvider}
+          provider={agentProvider}
+          onClose={() => setAgentOpen(false)}
+        />
+      )}
     </div>
   )
 }

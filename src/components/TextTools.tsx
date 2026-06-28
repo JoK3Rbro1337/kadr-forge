@@ -189,7 +189,7 @@ export function SubtitlePanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc?.id])
 
-  // pick up external edits (e.g. Claude editing the file) while clean
+  // pick up external edits (e.g. an embedded agent editing the file) while clean
   useEffect(() => {
     if (!doc) return
     const timer = setInterval(async () => {
@@ -228,12 +228,12 @@ export function SubtitlePanel() {
 
   return (
     <div className="sub-panel">
-      <div className="claude-head">
+      <div className="floating-panel-head">
         <span>📄 {doc.name}</span>
-        <span className="dim claude-hint">{doc.language ? `(${doc.language})` : ''}</span>
+        <span className="dim floating-panel-hint">{doc.language ? `(${doc.language})` : ''}</span>
         <button disabled={!dirty} onClick={save}>{t('subSave')}{dirty ? ' *' : ''}</button>
         <button onClick={() => void load(doc)} title={t('subReload')}>↻</button>
-        <button className="claude-close" onClick={close}>✕</button>
+        <button className="floating-panel-close" onClick={close}>✕</button>
       </div>
       <div className="sub-body">
         {missing && <div className="tr-error">{t('subMissing')}: {doc.path}</div>}

@@ -10,6 +10,7 @@ import { join } from 'path'
 import { createHash } from 'crypto'
 import { homedir } from 'os'
 import type { FragmentSpec, FragmentInfo } from '@shared/types'
+import { activeAgentEnv } from './agent-config'
 
 export const WORKSPACE = process.env.KADR_FRAGMENTS_DIR || join(homedir(), 'kadr-fragments')
 const FRAG_DIR = () => join(WORKSPACE, 'src', 'fragments')
@@ -35,17 +36,12 @@ function killTree(child: ChildProcess | null) {
   }
 }
 
-// npm install and remotion's headless-chrome download may need the user's
-// network settings (proxies etc.) — shared with the Claude session config:
-// userData/claude-env.json { "env": { "HTTPS_PROXY": "...", ... } }
+// npm install and remotion's headless-chrome download may need the active
+// embedded agent's network settings (proxies etc.) — shared with that
+// agent's session config: userData/claude-env.json { "env": { "HTTPS_PROXY": "...", ... } }
+
 async function netEnv(): Promise<Record<string, string>> {
-  try {
-    const p = join(app.getPath('userData'), 'claude-env.json')
-    const cfg = JSON.parse(await fs.readFile(p, 'utf8'))
-    return cfg?.env ?? {}
-  } catch {
-    return {}
-  }
+  return activeAgentEnv()
 }
 
 // ------------------------------------------------------------- scaffolding

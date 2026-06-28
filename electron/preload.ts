@@ -71,6 +71,22 @@ const api: KadrApi = {
   writeTextFile: (path, content) => ipcRenderer.invoke('file:write-text', path, content),
   statFile: (path) => ipcRenderer.invoke('file:stat', path),
 
+  agentOpen: (provider, cols, rows, cwd) =>
+    ipcRenderer.invoke('agent:open', provider, cols, rows, cwd),
+  agentInput: (provider, data) => ipcRenderer.send('agent:input', provider, data),
+  agentResize: (provider, cols, rows) => ipcRenderer.send('agent:resize', provider, cols, rows),
+  agentClose: (provider) => ipcRenderer.invoke('agent:close', provider),
+  onAgentData: (cb) => {
+    const handler = (_e: unknown, data: string) => cb(data)
+    ipcRenderer.on('agent:data', handler)
+    return () => ipcRenderer.removeListener('agent:data', handler)
+  },
+  onAgentExit: (cb) => {
+    const handler = (_e: unknown, code: number) => cb(code)
+    ipcRenderer.on('agent:exit', handler)
+    return () => ipcRenderer.removeListener('agent:exit', handler)
+  },
+
   claudeOpen: (cols, rows, cwd) => ipcRenderer.invoke('claude:open', cols, rows, cwd),
   claudeInput: (data) => ipcRenderer.send('claude:input', data),
   claudeResize: (cols, rows) => ipcRenderer.send('claude:resize', cols, rows),

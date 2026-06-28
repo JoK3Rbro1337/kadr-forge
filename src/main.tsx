@@ -20,7 +20,7 @@ wireProxies()
 wireFragmentCapture()
 wireAutosave()
 
-// Scripting surface for automation and AI integration (Claude Code / MCP):
+// Scripting surface for automation and AI integration (Codex/Claude via MCP):
 // every editor operation is reachable from here.
 ;(window as any).kadrEditor = {
   useEditor, useSettings, usePosePresets, useFxPresets, projectDuration, uid, PRESETS, startExport, evalAnim,

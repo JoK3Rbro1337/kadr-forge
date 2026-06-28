@@ -411,8 +411,8 @@ input[type='color'] { padding: 0; width: 40px; height: 24px; }
 }
 .sub-cue textarea { width: 100%; resize: vertical; font-size: 13px; }
 
-/* ---- embedded Claude Code terminal ---- */
-.claude-panel {
+/* ---- embedded Codex / Claude terminal ---- */
+.agent-panel {
   position: fixed;
   right: 12px;
   top: 44px;
@@ -427,7 +427,7 @@ input[type='color'] { padding: 0; width: 40px; height: 24px; }
   z-index: 60;
   overflow: hidden;
 }
-.claude-head {
+.floating-panel-head {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -436,18 +436,25 @@ input[type='color'] { padding: 0; width: 40px; height: 24px; }
   border-bottom: 1px solid #2c3040;
   font-size: 13px;
 }
-.claude-hint { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.claude-close {
+.floating-panel-hint { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floating-panel-close {
   background: none;
   border: none;
   color: var(--dim);
   cursor: pointer;
   font-size: 14px;
 }
-.claude-close:hover { color: #ff7070; }
-.claude-term { flex: 1; min-height: 0; padding: 4px 0 4px 6px; }
-.claude-term .xterm { height: 100%; }
-.claude-btn.active { outline: 1px solid var(--accent, #7fc4ff); }
+.floating-panel-close:hover { color: #ff7070; }
+.agent-term { flex: 1; min-height: 0; padding: 4px 0 4px 6px; }
+.agent-term .xterm { height: 100%; }
+.agent-control { display: flex; align-items: stretch; }
+.agent-provider {
+  max-width: 92px;
+  border-radius: 4px 0 0 4px;
+  border-right: 0;
+}
+.agent-btn { border-radius: 0 4px 4px 0; }
+.agent-btn.active { outline: 1px solid var(--accent, #7fc4ff); }
 
 /* ---- clip effects (inspector) ---- */
 .fx-section-head {

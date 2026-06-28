@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// MCP stdio server bridging Claude Code to the running Kadr editor.
-// Spawned by claude itself (see kadr-mcp.json); forwards tool calls to the
+// MCP stdio server bridging an embedded coding agent to the running Kadr editor.
+// Spawned by Codex or Claude; forwards tool calls to the
 // editor's local HTTP bridge (port = argv[2]), which evaluates JS in the
 // renderer where window.kadrEditor lives.
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js')
@@ -42,7 +42,20 @@ function editorEval(code) {
 const asText = (v) => ({ content: [{ type: 'text', text: JSON.stringify(v, null, 1) }] })
 const asError = (e) => ({ content: [{ type: 'text', text: `Error: ${e.message || e}` }], isError: true })
 
-const server = new McpServer({ name: 'kadr', version: '1.0.0' })
+const INSTRUCTIONS =
+  'You are embedded inside Kadr, a video editor, and were opened from its UI. ' +
+  'The MCP server "kadr" is connected to the LIVE project the user is editing. ' +
+  'Use kadr_state to inspect it, kadr_eval to edit it, kadr_export to render it, ' +
+  'kadr_transcribe for speech-to-text, and kadr_fragment_create for Remotion compositions. ' +
+  'Treat user requests as being about this project unless told otherwise. Imported media ' +
+  'paths returned by kadr_state are real files; ffmpeg and ffprobe are available. If your ' +
+  'filesystem sandbox blocks a project text or fragment file, use kadr_eval with ' +
+  'window.kadr.readTextFile/writeTextFile instead of changing sandbox policy.'
+
+const server = new McpServer(
+  { name: 'kadr', version: '1.0.0' },
+  { instructions: INSTRUCTIONS }
+)
 
 server.registerTool('kadr_state', {
   description:
@@ -85,7 +98,8 @@ server.registerTool('kadr_eval', {
     '.evalAnim(anim, t).\n' +
     '- await window.kadr.probeMedia(path) → { asset } (probe a media file to import: then ' +
     'addAsset({ id: uid(), ...asset })); window.kadr.writeProject(path, project); ' +
-    'window.kadr.readProject(path).\n' +
+    'window.kadr.readProject(path); window.kadr.readTextFile(path); ' +
+    'window.kadr.writeTextFile(path, content).\n' +
     'Times are seconds. Mutations: always pushHistory first; the store is zustand — re-read ' +
     'getState() after each action. Example — add a media file to track V1 at 2s:\n' +
     'const ed = window.kadrEditor; const st = () => ed.useEditor.getState();\n' +
@@ -180,6 +194,8 @@ server.registerTool('kadr_fragment_create', {
     '- to use media/images, copy or write files INTO the fragment folder and import them ' +
     '(import bg from "./bg.jpg") — absolute paths will not survive the final render bundling\n' +
     '- the module must keep exporting `fragment = { component, meta }`\n' +
+    '- if your filesystem sandbox blocks entryFile, read/write it through kadr_eval using ' +
+    'window.kadr.readTextFile(entryFile) and window.kadr.writeTextFile(entryFile, content)\n' +
     '- subtitle data: read SRT files from kadr_state project.texts and bake the cues into the ' +
     'composition (e.g. as a const array) for word-precise animated captions',
   inputSchema: {
